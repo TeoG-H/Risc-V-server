@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>RISC-V Verilog CPU Runner</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    textarea {
+      width: 900px;
+      max-width: 100%;
+    }
+
+    pre {
+      background: #f4f4f4;
+      padding: 12px;
+      overflow: auto;
+    }
+
+    .err {
+      color: #b00020;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>RISC-V Verilog CPU Runner (subset: add, addi, and, or, beq, lw, sw)</h2>
+
+  <form method="post">
+    <p>Assembly:</p>
+    <textarea name="code" rows="12" placeholder="Ex:
+      addi t0, x0, 5
+      addi t1, x0, 7
+      add  t2, t0, t1
+      ">{{ request.form.get('code','') }}</textarea>
+    <br><br>
+    <button type="submit">RUN</button>
+  </form>
+
+  {% if error %}
+  <p class="err">Eroare: {{ error }}</p>
+  {% endif %}
+
+  <h3>program.mem (hex generat):</h3>
+  <pre>{{ memhex }}</pre>
+
+  <h3>Output simulator (vvp sim):</h3>
+  <pre>{{ output }}</pre>
+</body>
+
+</html>
