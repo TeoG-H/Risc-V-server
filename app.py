@@ -1,6 +1,7 @@
 from flask import Flask, request, render_template
 import subprocess
 from assembler import assemble, to_mem_hex
+import os
 
 app = Flask(__name__)
 
@@ -31,4 +32,5 @@ def index():
     return render_template("index.html", output=output, memhex=memhex, error=error)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
