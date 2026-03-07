@@ -33,9 +33,11 @@ module Instruction_Mem(input  [31:0] read_address, output [31:0] instruction);
 
     reg [7:0] mem [0:1023];    
     reg [31:0] temp_mem [0:255]; // mem de 64 ko
-    integer i;
+    integer i,j;
 
     initial begin
+         for(j=0;j<256;j=j+1)
+            mem[j] = 32'b0;
         $readmemh("program.mem", temp_mem);
 
         for (i = 0; i < 64; i = i + 1) begin

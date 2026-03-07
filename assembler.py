@@ -12,48 +12,47 @@ ABI_REGS: Dict[str, int] = {
     "t3": 28, "t4": 29, "t5": 30, "t6": 31,
 }
 
-def reg_num(token: str) -> int:
+def reg_num(token: str):
     t = token.strip().lower()
-    if re.fullmatch(r"x([0-9]|[12][0-9]|3[01])", t):
-        return int(t[1:])
+    if re.fullmatch(r"x([0-9]|[12][0-9]|3[01])", t): #verifica daca a scris x0, x1 mapeaza pe
+        return int(t[1:]) #taie primul caracter si le transporma pe resutul in int
     if t in ABI_REGS:
         return ABI_REGS[t]
-    raise ValueError(f"Registru necunoscut: '{token}' (folosește x0..x31 sau ABI: t0,t1,...,a0,...,s0,...,sp,ra etc.)")
+    raise ValueError(f"Registru necunoscut: '{token}'")
 
-def parse_imm(token: str) -> int:
+def parse_imm(token: str):
     t = token.strip().lower()
     if t.startswith("-0x"):
         return -int(t[3:], 16)
     if t.startswith("0x"):
         return int(t[2:], 16)
-    return int(t, 10)
+    return int(t, 10) # transforma t in baza zece in int
 
 def check_range_signed(val: int, bits: int, what: str):
     lo = -(1 << (bits - 1))
     hi = (1 << (bits - 1)) - 1
     if not (lo <= val <= hi):
-        raise ValueError(f"{what}={val} nu încape pe {bits} biți semnați (range {lo}..{hi}).")
+        raise ValueError(f"{what}={val} nu incape pe {bits} biti semnasi (range {lo}..{hi}).")
 
-def u32(x: int) -> int:
+def u32(x: int):
     return x & 0xFFFFFFFF
 
-
-def enc_r_type(funct7: int, rs2: int, rs1: int, funct3: int, rd: int, opcode: int) -> int:
+def enc_r_type(funct7: int, rs2: int, rs1: int, funct3: int, rd: int, opcode: int):
     return u32((funct7 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode)
 
-def enc_i_type(imm: int, rs1: int, funct3: int, rd: int, opcode: int) -> int:
+def enc_i_type(imm: int, rs1: int, funct3: int, rd: int, opcode: int):
     check_range_signed(imm, 12, "imm(I)")
     imm12 = imm & 0xFFF
     return u32((imm12 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode)
 
-def enc_s_type(imm: int, rs2: int, rs1: int, funct3: int, opcode: int) -> int:
+def enc_s_type(imm: int, rs2: int, rs1: int, funct3: int, opcode: int):
     check_range_signed(imm, 12, "imm(S)")
     imm12 = imm & 0xFFF
     imm_hi = (imm12 >> 5) & 0x7F
     imm_lo = imm12 & 0x1F
     return u32((imm_hi << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_lo << 7) | opcode)
 
-def enc_b_type(offset_bytes: int, rs2: int, rs1: int, funct3: int, opcode: int) -> int:
+def enc_b_type(offset_bytes: int, rs2: int, rs1: int, funct3: int, opcode: int):
     # Branch immediate is multiple of 2; encoded as imm[12|10:5|4:1|11]
     if offset_bytes % 2 != 0:
         raise ValueError(f"Offset BEQ trebuie să fie multiplu de 2 bytes, primit {offset_bytes}.")
@@ -75,12 +74,10 @@ def enc_b_type(offset_bytes: int, rs2: int, rs1: int, funct3: int, opcode: int) 
         opcode
     )
 
-# ----------------------------
-# Parsing
-# ----------------------------
+
 COMMENT_RE = re.compile(r"(#|//).*")
 
-def strip_comment(line: str) -> str:
+def strip_comment(line: str):
     return COMMENT_RE.sub("", line).strip()
 
 LABEL_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$")
@@ -91,7 +88,7 @@ class AsmLine:
     pc: int
 
 def tokenize_operands(op_str: str) -> List[str]:
-    # split by commas
+    # spara dupa virgule operanzii
     return [t.strip() for t in op_str.split(",") if t.strip()]
 
 MEM_RE = re.compile(r"^\s*([+-]?(?:0x[0-9a-fA-F]+|\d+))\s*\(\s*([A-Za-z0-9_]+)\s*\)\s*$")
@@ -106,24 +103,19 @@ def parse_mem_operand(s: str) -> Tuple[int, int]:
 
 
 def assemble(text: str, base_addr: int = 0) -> List[int]:
-    """
-    Returns list of 32-bit instructions.
-    PC advances by 4 per instruction.
-    Labels resolved for BEQ.
-    """
     lines_raw = text.splitlines()
-    labels: Dict[str, int] = {}
-    instr_lines: List[AsmLine] = []
+    labels: Dict[str, int] = {} #pt etichete
+    instr_lines: List[AsmLine] = [] #pt instructiuni
     pc = base_addr
 
     for raw in lines_raw:
-        line = strip_comment(raw)
+        line = strip_comment(raw) #sterg comentariile
         if not line:
-            continue
+            continue #ca pot sa am o linie doar cu un comnetariu
         while True:
             m = LABEL_RE.match(line)
             if not m:
-                break
+                break #asta daca nu e un label 
             label = m.group(1)
             rest = m.group(2).strip()
             if label in labels:
@@ -147,13 +139,11 @@ def assemble(text: str, base_addr: int = 0) -> List[int]:
 
     return out
 
-def encode_line(line: str, pc: int, labels: Dict[str, int]) -> int:
+def encode_line(line: str, pc: int, labels: Dict[str, int]):
     parts = line.strip().split(None, 1)
-    if not parts:
-        raise ValueError("Linie goală?")
-    op = parts[0].lower()
-    ops = parts[1] if len(parts) > 1 else ""
-    operands = tokenize_operands(ops)
+    op = parts[0].lower() # instructiunea 
+    ops = parts[1] if len(parts) > 1 else ""  
+    operands = tokenize_operands(ops) #operanzii separati 
 
     OPC_R   = 0b0110011
     OPC_I   = 0b0010011
@@ -163,25 +153,25 @@ def encode_line(line: str, pc: int, labels: Dict[str, int]) -> int:
 
     if op == "add":
         if len(operands) != 3:
-            raise ValueError("Sintaxă: add rd, rs1, rs2")
+            raise ValueError("Sintaxa: add rd, rs1, rs2")
         rd, rs1, rs2 = map(reg_num, operands)
         return enc_r_type(0b0000000, rs2, rs1, 0b000, rd, OPC_R)
 
     if op == "and":
         if len(operands) != 3:
-            raise ValueError("Sintaxă: and rd, rs1, rs2")
+            raise ValueError("Sintaxa: and rd, rs1, rs2")
         rd, rs1, rs2 = map(reg_num, operands)
         return enc_r_type(0b0000000, rs2, rs1, 0b111, rd, OPC_R)
 
     if op == "or":
         if len(operands) != 3:
-            raise ValueError("Sintaxă: or rd, rs1, rs2")
+            raise ValueError("Sintaxa: or rd, rs1, rs2")
         rd, rs1, rs2 = map(reg_num, operands)
         return enc_r_type(0b0000000, rs2, rs1, 0b110, rd, OPC_R)
 
     if op == "addi":
         if len(operands) != 3:
-            raise ValueError("Sintaxă: addi rd, rs1, imm")
+            raise ValueError("Sintaxa: addi rd, rs1, imm")
         rd = reg_num(operands[0])
         rs1 = reg_num(operands[1])
         imm = parse_imm(operands[2])
@@ -189,21 +179,21 @@ def encode_line(line: str, pc: int, labels: Dict[str, int]) -> int:
 
     if op == "lw":
         if len(operands) != 2:
-            raise ValueError("Sintaxă: lw rd, imm(rs1)")
+            raise ValueError("Sintaxa: lw rd, imm(rs1)")
         rd = reg_num(operands[0])
         imm, rs1 = parse_mem_operand(operands[1])
         return enc_i_type(imm, rs1, 0b010, rd, OPC_LW)
 
     if op == "sw":
         if len(operands) != 2:
-            raise ValueError("Sintaxă: sw rs2, imm(rs1)")
+            raise ValueError("Sintaxa: sw rs2, imm(rs1)")
         rs2 = reg_num(operands[0])
         imm, rs1 = parse_mem_operand(operands[1])
         return enc_s_type(imm, rs2, rs1, 0b010, OPC_SW)
 
     if op == "beq":
         if len(operands) != 3:
-            raise ValueError("Sintaxă: beq rs1, rs2, label/imm")
+            raise ValueError("Sintaxa: beq rs1, rs2, label/imm")
         rs1 = reg_num(operands[0])
         rs2 = reg_num(operands[1])
         target = operands[2].strip()
@@ -216,16 +206,7 @@ def encode_line(line: str, pc: int, labels: Dict[str, int]) -> int:
             offset = parse_imm(target)
         return enc_b_type(offset, rs2, rs1, 0b000, OPC_BEQ)
 
-    raise ValueError(f"Instrucțiune nesuportată: '{op}'. Accept: add, addi, and, or, beq, lw, sw")
+    raise ValueError(f"Instrutțiune nesuportata: '{op}'. Accept: add, addi, and, or, beq, lw, sw")
 
 def to_mem_hex(instrs: List[int]) -> str:
     return "\n".join(f"{i:08x}" for i in instrs) + ("\n" if instrs else "")
-
-if __name__ == "__main__":
-    demo = """
-        addi t0, x0, 5
-        addi t1, x0, 7
-        add  t2, t0, t1
-    """
-    instrs = assemble(demo)
-    print(to_mem_hex(instrs))

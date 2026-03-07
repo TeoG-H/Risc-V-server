@@ -3,16 +3,54 @@
 
 <head>
   <meta charset="utf-8" />
-  <title>RISC-V Verilog CPU Runner</title>
+  <title>RISC-V CPU Runner</title>
+
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
+      background: #f5f6fa;
+      margin: 0;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 30px;
+    }
+
+    h1 {
+      text-align: center;
     }
 
     textarea {
-      width: 900px;
-      max-width: 100%;
+      width: 100%;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background: #2d7df6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1e63c9;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
     pre {
@@ -29,28 +67,51 @@
 </head>
 
 <body>
-  <h2>RISC-V Verilog CPU Runner (subset: add, addi, and, or, beq, lw, sw)</h2>
 
-  <form method="post">
-    <p>Assembly:</p>
-    <textarea name="code" rows="12" placeholder="Ex:
-      addi t0, x0, 5
-      addi t1, x0, 7
-      add  t2, t0, t1
-      ">{{ request.form.get('code','') }}</textarea>
-    <br><br>
-    <button type="submit">RUN</button>
-  </form>
+  <div class="container">
 
-  {% if error %}
-  <p class="err">Eroare: {{ error }}</p>
-  {% endif %}
+    <h1>RISC-V Verilog CPU Runner</h1>
 
-  <h3>program.mem (hex generat):</h3>
-  <pre>{{ memhex }}</pre>
+    <div class="panel">
+      <form method="post">
 
-  <h3>Output simulator (vvp sim):</h3>
-  <pre>{{ output }}</pre>
+        <p><b>Assembly program</b></p>
+
+        <textarea name="code" rows="12" placeholder="Example:
+
+addi t0, zero, 5
+addi t1, zero, 7
+add  t2, t0, t1
+">{{ request.form.get('code','') }}</textarea>
+
+        <br><br>
+
+        <button type="submit">Run program</button>
+
+      </form>
+    </div>
+
+
+    {% if error %}
+    <div class="panel">
+      <p class="err">Error: {{ error }}</p>
+    </div>
+    {% endif %}
+
+
+    <div class="panel">
+      <h3>Generated program.mem</h3>
+      <pre>{{ memhex }}</pre>
+    </div>
+
+
+    <div class="panel">
+      <h3>Simulator output</h3>
+      <pre>{{ output }}</pre>
+    </div>
+
+  </div>
+
 </body>
 
 </html>

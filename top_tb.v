@@ -19,12 +19,12 @@ module top_tb;
     rst = 1;
     #20; 
     rst = 0;
-    #400;
+    #500;
         
         for(i=0;i<32;i=i+1)
            $display("x%0d = %0d", i, $signed(cpu.Decode.rf.Registers[i]));
             
-    $finish;
+    $finish(0);
     
     end
 endmodule
