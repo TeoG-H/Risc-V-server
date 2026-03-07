@@ -53,10 +53,9 @@ def enc_s_type(imm: int, rs2: int, rs1: int, funct3: int, opcode: int):
     return u32((imm_hi << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_lo << 7) | opcode)
 
 def enc_b_type(offset_bytes: int, rs2: int, rs1: int, funct3: int, opcode: int):
-    # Branch immediate is multiple of 2; encoded as imm[12|10:5|4:1|11]
+    
     if offset_bytes % 2 != 0:
         raise ValueError(f"Offset BEQ trebuie să fie multiplu de 2 bytes, primit {offset_bytes}.")
-    # offset is signed 13-bit (because LSB is implicit 0)
     check_range_signed(offset_bytes, 13, "offset(B) bytes")
     imm = offset_bytes & 0x1FFF  # 13 bits
     imm12 = (imm >> 12) & 0x1
