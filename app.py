@@ -13,7 +13,6 @@ VERILOG_FILES = [
     "Execute_cycle.v",
     "Memory_Cycle.v",
     "Writeback_Cycle.v",
-    "Hazard_Unit.v",
     "Hazard_Detection_Unit.v",
     "single_cycle_components.v",
 ]

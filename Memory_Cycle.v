@@ -1,9 +1,5 @@
-`timescale 1ns / 1ps
-
-module Memory_Cycle(clk, rst, RegWriteM, MemWriteM, ResultSrcM, RD_M, PCPlus4M, WriteDataM, 
-    ALU_ResultM, RegWriteW, ResultSrcW, RD_W, PCPlus4W, ALU_ResultW, ReadDataW);
+module Memory_Cycle(clk, rst, RegWriteM, MemWriteM, ResultSrcM, RD_M, PCPlus4M, WriteDataM, ALU_ResultM, RegWriteW, ResultSrcW, RD_W, PCPlus4W, ALU_ResultW, ReadDataW);
     
-
     input clk, rst, RegWriteM, MemWriteM, ResultSrcM;
     input [4:0] RD_M; 
     input [31:0] PCPlus4M, WriteDataM, ALU_ResultM;
@@ -28,27 +24,30 @@ module Memory_Cycle(clk, rst, RegWriteM, MemWriteM, ResultSrcM, RD_M, PCPlus4M, 
         if (rst == 1'b1) begin
             RegWriteM_r <= 1'b0; 
             ResultSrcM_r <= 1'b0;
-            RD_M_r <= 5'h00;
-            PCPlus4M_r <= 32'h00000000; 
-            ALU_ResultM_r <= 32'h00000000; 
-            ReadDataM_r <= 32'h00000000;
+            
+            ALU_ResultM_r <= 32'b0;
+            ReadDataM_r <= 32'b0; 
+            RD_M_r <= 5'b0;
+            PCPlus4M_r <= 32'b0; 
         end
         else begin
             RegWriteM_r <= RegWriteM; 
             ResultSrcM_r <= ResultSrcM;
-            RD_M_r <= RD_M;
-            PCPlus4M_r <= PCPlus4M; 
+            
             ALU_ResultM_r <= ALU_ResultM; 
             ReadDataM_r <= ReadDataM;
+            RD_M_r <= RD_M;
+            PCPlus4M_r <= PCPlus4M; 
         end
     end 
 
  
     assign RegWriteW = RegWriteM_r;
     assign ResultSrcW = ResultSrcM_r;
-    assign RD_W = RD_M_r;
-    assign PCPlus4W = PCPlus4M_r;
+    
     assign ALU_ResultW = ALU_ResultM_r;
     assign ReadDataW = ReadDataM_r;
+    assign RD_W = RD_M_r;
+    assign PCPlus4W = PCPlus4M_r;
 
 endmodule

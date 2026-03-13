@@ -1,7 +1,6 @@
-`timescale 1ns / 1ps
-
 module Execute_cycle(clk, rst, RegWriteE, ALUSrcE, MemWriteE, ResultSrcE, BranchE, ALUControlE, ALU_ResultM2,
-    RD1_E, RD2_E, Imm_Ext_E, RD_E, PCE, PCPlus4E, PCSrcE, PCTargetE, RegWriteM, MemWriteM, ResultSrcM, RD_M, PCPlus4M, WriteDataM, ALU_ResultM, ResultW, ForwardA_E, ForwardB_E);
+                     RD1_E, RD2_E, Imm_Ext_E, RD_E, PCE, PCPlus4E, PCSrcE, PCTargetE, RegWriteM, MemWriteM, 
+                     ResultSrcM, RD_M, PCPlus4M, WriteDataM, ALU_ResultM, ResultW, ForwardA_E, ForwardB_E);
 
 
     input clk, rst, RegWriteE,ALUSrcE,MemWriteE,ResultSrcE,BranchE;
@@ -15,10 +14,9 @@ module Execute_cycle(clk, rst, RegWriteE, ALUSrcE, MemWriteE, ResultSrcE, Branch
 
     output PCSrcE, RegWriteM, MemWriteM, ResultSrcM;
     output [4:0] RD_M; 
-    output [31:0] PCPlus4M, WriteDataM, ALU_ResultM;
-    output [31:0] PCTargetE;
+    output [31:0] PCPlus4M, WriteDataM, ALU_ResultM, PCTargetE;
 
-    wire [31:0] Src_A, Src_B_interim, Src_B;
+    wire [31:0] Src_A, Src_B_inter, Src_B;
     wire [31:0] ResultE;
     wire ZeroE;
 
@@ -27,50 +25,57 @@ module Execute_cycle(clk, rst, RegWriteE, ALUSrcE, MemWriteE, ResultSrcE, Branch
     reg [31:0] PCPlus4E_r, RD2_E_r, ResultE_r;
 
 
-    Mux_3_by_1 srca_mux (.a(RD1_E), .b(ResultW), .c(ALU_ResultM2), .s(ForwardA_E), .d(Src_A));
+    Mux_3_1 src_a (.a(RD1_E), .b(ResultW), .c(ALU_ResultM2), .s(ForwardA_E), .d(Src_A));
     
     
-    Mux_3_by_1 srcb_mux (.a(RD2_E), .b(ResultW), .c(ALU_ResultM2), .s(ForwardB_E), .d(Src_B_interim));
+    Mux_3_1 src_b_int (.a(RD2_E), .b(ResultW), .c(ALU_ResultM2), .s(ForwardB_E), .d(Src_B_inter));
    
    
-    Mux alu_src_mux (.A(Src_B_interim), .B(Imm_Ext_E), .sel(ALUSrcE), .Mux_out(Src_B));
+    Mux src_b (.A(Src_B_inter), .B(Imm_Ext_E), .sel(ALUSrcE), .Mux_out(Src_B));
    
    
-    ALU alu (.A(Src_A), .B(Src_B), .Result(ResultE), .ALUControl(ALUControlE), .OverFlow(), 
-             .Carry(), .Zero(ZeroE), .Negative());
+    ALU alu (.A(Src_A), .B(Src_B), .Result(ResultE), 
+             .ALUControl(ALUControlE), .Zero(ZeroE));
     
     
-    PC_Adder branch_adder (.a(PCE), .b(Imm_Ext_E), .c(PCTargetE));
+    PC_Adder branch_adder (.a(PCE), .b(Imm_Ext_E), .out(PCTargetE));
  
     always @(posedge clk or posedge rst) begin
         if(rst == 1'b1) begin
             RegWriteE_r <= 1'b0; 
-            MemWriteE_r <= 1'b0; 
             ResultSrcE_r <= 1'b0;
+            MemWriteE_r <= 1'b0; 
+                        
+            ResultE_r <= 32'b0;
+            
+            RD2_E_r <= 32'b0; 
             RD_E_r <= 5'b0;
             PCPlus4E_r <= 32'b0; 
-            RD2_E_r <= 32'b0; 
-            ResultE_r <= 32'b0;
+
         end
         else begin
-            RegWriteE_r <= RegWriteE; 
-            MemWriteE_r <= MemWriteE; 
+            RegWriteE_r <= RegWriteE;
             ResultSrcE_r <= ResultSrcE;
-            RD_E_r <= RD_E;
-            PCPlus4E_r <= PCPlus4E; 
-            RD2_E_r <= Src_B_interim; 
+            MemWriteE_r <= MemWriteE;
+            
             ResultE_r <= ResultE;
+            
+            RD2_E_r <= Src_B_inter;
+            RD_E_r <= RD_E;
+            PCPlus4E_r <= PCPlus4E;
         end
     end
 
 
     assign PCSrcE = ZeroE &  BranchE;
     assign RegWriteM = RegWriteE_r;
-    assign MemWriteM = MemWriteE_r;
     assign ResultSrcM = ResultSrcE_r;
+    assign MemWriteM = MemWriteE_r;
+    
+    assign ALU_ResultM = ResultE_r;
+    
+    assign WriteDataM = RD2_E_r;
     assign RD_M = RD_E_r;
     assign PCPlus4M = PCPlus4E_r;
-    assign WriteDataM = RD2_E_r;
-    assign ALU_ResultM = ResultE_r;
-
+    
 endmodule

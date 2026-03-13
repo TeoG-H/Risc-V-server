@@ -1,7 +1,7 @@
-`timescale 1ns / 1ps
 
 module PC( input clk, input reset, input en, input [31:0] PC_in, output reg [31:0] PC_out );
 
+//output reg pt trebuie pastrat intre cicluri si pot sa nu il modific
    always @(posedge clk or posedge reset)
    begin
         if(reset)
@@ -19,22 +19,13 @@ module adder_PC_4(input [31:0] adder_4_in, output [31:0] adder_4_out);
 endmodule
 
 
-module PC_Adder (a,b,c);
-
-    input [31:0]a,b;
-    output [31:0]c;
-
-    assign c = a + b;
-    
-endmodule
 
 
 module Instruction_Mem(input  [31:0] read_address, output [31:0] instruction);
 
-    reg [7:0] mem [0:1023];    
-    reg [31:0] temp_mem [0:255]; // mem de 64 ko
+    reg [7:0] mem [0:1023];  // memoria efectiva, in ea sunt stocate datele in byte adica dim totala e de 1024 bytes, 1 kb
+    reg [31:0] temp_mem [0:255]; // acum instructiunile sunt codificate pe 32 de biti adica 4 bytes si iau o mem temp care are 1024/4 locatii adica 64  adica incap maxim 64 de instructiuni
     integer i,j;
-
     initial begin
          for(j=0;j<256;j=j+1)
             mem[j] = 32'b0;
@@ -52,69 +43,32 @@ module Instruction_Mem(input  [31:0] read_address, output [31:0] instruction);
 endmodule
 
 
-module Reg_File(clk, reset, RegWrite, Rs1, Rs2, Rd, write_data, read_data1, read_data2);
-
-    input clk, reset, RegWrite;
-    input [4:0] Rs1, Rs2, Rd;
-    input [31:0] write_data;
-    output [31:0] read_data1, read_data2;
-    
-    reg [31:0] Registers[31:0];
-    integer k;
-    
-    always @(posedge clk or posedge reset)
-    begin
-        if (reset)
-        begin
-            for (k=0; k<32; k=k+1) begin
-                Registers[k] <= 32'b0;
-            end
-        end
-        else if (RegWrite  && (Rd != 5'd0)) begin  // registrul 0 trebuie sa fie mereu 0
-            Registers[Rd] <= write_data;
-        end
-    end
-    
-assign read_data1 = (RegWrite && (Rd != 5'd0) && (Rd == Rs1)) ? write_data : Registers[Rs1];
-assign read_data2 = (RegWrite && (Rd != 5'd0) && (Rd == Rs2)) ? write_data : Registers[Rs2];
-
-endmodule
 
 
-
-
-module Sign_Extend (In,ImmSrc,Imm_Ext);
-    input [31:0] In;
-    input [1:0] ImmSrc;
-    output [31:0] Imm_Ext;
-
-    assign Imm_Ext =  (ImmSrc == 2'b00) ? {{20{In[31]}},In[31:20]} : 
-                     (ImmSrc == 2'b01) ? {{20{In[31]}},In[31:25],In[11:7]} :
-                     (ImmSrc == 2'b10) ?{{20{In[31]}}, In[7], In[30:25], In[11:8], 1'b0} : 32'h00000000; 
-
-endmodule
-
-module Main_Decoder(Op,RegWrite,ImmSrc,ALUSrc,MemWrite,ResultSrc,Branch,ALUOp);
+module Decoder(Op,RegWrite,ImmSrc,ALUSrc,MemWrite,ResultSrc,Branch,ALUOp);
     input [6:0]Op;
     output RegWrite,ALUSrc,MemWrite,ResultSrc,Branch;
     output [1:0]ImmSrc,ALUOp;
 
     assign RegWrite = (Op == 7'b0000011 | Op == 7'b0110011 | Op == 7'b0010011 ) ? 1'b1 :
                                                               1'b0 ;
-    assign ImmSrc = (Op == 7'b0100011) ? 2'b01 : 
-                    (Op == 7'b1100011) ? 2'b10 :    
-                                         2'b00 ;
+
     assign ALUSrc = (Op == 7'b0000011 | Op == 7'b0100011 | Op == 7'b0010011) ? 1'b1 :
                                                             1'b0 ;
     assign MemWrite = (Op == 7'b0100011) ? 1'b1 :
                                            1'b0 ;
     assign ResultSrc = (Op == 7'b0000011) ? 1'b1 :
                                             1'b0 ;
+                                            
     assign Branch = (Op == 7'b1100011) ? 1'b1 :
                                          1'b0 ;
     assign ALUOp = (Op == 7'b0110011) ? 2'b10 :
                    (Op == 7'b1100011) ? 2'b01 :
                                         2'b00 ;
+                                        
+    assign ImmSrc = (Op == 7'b0100011) ? 2'b01 : 
+                    (Op == 7'b1100011) ? 2'b10 :    
+                                         2'b00 ;
 
 endmodule
 
@@ -147,35 +101,60 @@ module Control_Unit_Top(Op,funct3,funct7, RegWrite,ImmSrc,ALUSrc,MemWrite,Result
 
     wire [1:0]ALUOp;
 
-    Main_Decoder Main_Decoder(
-                .Op(Op),
-                .RegWrite(RegWrite),
-                .ImmSrc(ImmSrc),
-                .MemWrite(MemWrite),
-                .ResultSrc(ResultSrc),
-                .Branch(Branch),
-                .ALUSrc(ALUSrc),
-                .ALUOp(ALUOp)
-    );
+    Decoder Decoder(.Op(Op), 
+                    .RegWrite(RegWrite), .ImmSrc(ImmSrc), .MemWrite(MemWrite), .ResultSrc(ResultSrc), .Branch(Branch), .ALUSrc(ALUSrc), 
+                    .ALUOp(ALUOp));
+   
+    ALU_Decoder ALU_Decoder(.ALUOp(ALUOp), .funct3(funct3), .funct7(funct7), .op(Op), 
+                            .ALUControl(ALUControl));
 
-    ALU_Decoder ALU_Decoder(
-                            .ALUOp(ALUOp),
-                            .funct3(funct3),
-                            .funct7(funct7),
-                            .op(Op),
-                            .ALUControl(ALUControl)
-    );
+endmodule
 
+module Reg_File(clk, reset, RegWrite, Rs1, Rs2, Rd, write_data, read_data1, read_data2);
+
+    input clk, reset, RegWrite;
+    input [4:0] Rs1, Rs2, Rd;
+    input [31:0] write_data;
+    output [31:0] read_data1, read_data2;
+    
+    reg [31:0] Registers[31:0];
+    integer k;
+    
+    always @(posedge clk or posedge reset)
+    begin
+        if (reset)
+        begin
+            for (k=0; k<32; k=k+1) begin
+                Registers[k] <= 32'b0;
+            end
+        end
+        else if (RegWrite  && (Rd != 5'd0)) begin  // registrul 0 trebuie sa fie mereu 0
+            Registers[Rd] <= write_data;
+        end
+    end
+    
+assign read_data1 = (RegWrite && (Rd != 5'd0) && (Rd == Rs1)) ? write_data : Registers[Rs1];
+assign read_data2 = (RegWrite && (Rd != 5'd0) && (Rd == Rs2)) ? write_data : Registers[Rs2];
 
 endmodule
 
 
 
-module ALU(A,B,Result,ALUControl,OverFlow,Carry,Zero,Negative);
+
+module Imm (input [31:0] In, input [1:0] ImmSrc, output [31:0] Imm_Ext);
+
+    assign Imm_Ext =  (ImmSrc == 2'b00) ? {{20{In[31]}},In[31:20]} : 
+                     (ImmSrc == 2'b01) ? {{20{In[31]}},In[31:25],In[11:7]} :
+                     (ImmSrc == 2'b10) ?{{20{In[31]}}, In[7], In[30:25], In[11:8], 1'b0} : 32'h00000000; 
+
+endmodule
+
+
+module ALU(A,B,Result,ALUControl,Zero);
 
     input [31:0]A,B;
     input [2:0]ALUControl;
-    output Carry,OverFlow,Zero,Negative;
+    output Zero;
     output [31:0]Result;
 
     wire Cout;
@@ -189,12 +168,8 @@ module ALU(A,B,Result,ALUControl,OverFlow,Carry,Zero,Negative);
                            (ALUControl == 3'b011) ? A | B :
                            (ALUControl == 3'b101) ? {{32{1'b0}},(Sum[31])} :
                            {33{1'b0}};
-    assign OverFlow = ((Sum[31] ^ A[31]) & 
-                      (~(ALUControl[0] ^ B[31] ^ A[31])) &
-                      (~ALUControl[1]));
-    assign Carry = ((~ALUControl[1]) & Cout);
+
     assign Zero = &(~Result);
-    assign Negative = Result[31];
 
 endmodule
 
@@ -234,17 +209,12 @@ module Data_Memory(clk, reset, MemWrite, read_address, Write_data, MemData_out);
                          mem[addr]};
 endmodule
 
-module Mux(sel, A, B, Mux_out);
-
-    input sel;
-    input [31:0] A, B;
-    output [31:0] Mux_out;
-    
+module Mux(input sel, input [31:0] A, input [31:0] B, output [31:0] Mux_out);
     assign Mux_out = (sel == 1'b0) ? A : B;
-
 endmodule
 
-module Mux_3_by_1 (a,b,c,s,d);
+
+module Mux_3_1 (a,b,c,s,d);
     input [31:0] a,b,c;
     input [1:0] s;
     output [31:0] d;
@@ -254,6 +224,12 @@ module Mux_3_by_1 (a,b,c,s,d);
 endmodule
 
 
+
+module PC_Adder (input [31:0]a,input [31:0] b, output [31:0] out);
+
+    assign out = a + b;
+    
+endmodule
 
 
 
