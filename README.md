@@ -1,15 +1,14 @@
-# RISC-V Web CPU Runner
+# RV32I Pipelined RISC-V CPU with Web Simulator
 
 🔗 Live Application:
 https://risc-v-server-1.onrender.com/
 
 ## Overview
+This project implements a 32-bit RV32I pipelined RISC-V processor written in Verilog, together with a web-based simulator that allows users to write assembly code, assemble it into machine code, and execute it on the processor using Verilog simulation.
 
-This project implements a 32-bit RV32I pipelined RISC-V processor in Verilog and a web-based interface that allows users to write assembly code, assemble it automatically, and run simulations.
+The processor includes forwarding, hazard detection, pipeline registers, and branch handling logic, similar to a real CPU pipeline.
 
-The goal of the project is to demonstrate how a pipelined processor works, including data hazard resolution, forwarding, branch handling, and memory operations, while providing an easy way to test programs through a web interface.
-
-![Pipeline Architecture](images/schema.png)
+![Pipeline Architecture](images/schema1.png)
 
 ## Features
 ### Processor Architecture
@@ -28,11 +27,38 @@ The goal of the project is to demonstrate how a pipelined processor works, inclu
 
 The processor includes hardware mechanisms to handle common pipeline hazards.
 
-- Data Hazards: resolved using forwarding  from later pipeline stages.
-- Load-Use Hazard: detected using a Hazard Detection Unit, which inserts a pipeline stall when needed.
-- Control Hazards: branch instructions are resolved using branch decision in the Execute stage and pipeline flush when a branch is taken
+- Data hazards are resolved using a forwarding unit that selects values from MEM and WB stages when the register file does not yet contain the correct value.
+
+- Load-use hazards are detected in the Hazard Detection Unit, which inserts a stall and flush to prevent incorrect execution.
+
+- Control hazards are resolved by computing the branch decision in the Execute stage and flushing the pipeline when needed.
+
 
 ## Project Components
-- Verilog Processor
-- Custom RISC-V Assembler (Python)
-- Web Simulato
+
+- Verilog CPU
+
+- Python Assembler
+  - Converts RISC-V assembly to machine code
+  - Supports labels and offsets
+  - Generates program.mem
+
+- Web Interface (Flask)
+  - Accepts assembly code
+  - Runs assembler
+  - Compiles Verilog using Icarus Verilog
+  - Runs simulation
+  - Displays output
+
+- Docker Container
+  - Includes Python + Icarus Verilog
+  - Allows running the simulator online
+
+## Simulation Flow
+
+1. User writes assembly code in the web interface
+2. Python assembler converts code to machine code
+3. program.mem is generated
+4. Verilog files are compiled using Icarus Verilog
+5. Testbench runs the CPU
+6. Output is displayed in the browser
