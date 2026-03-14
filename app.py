@@ -1,9 +1,9 @@
 from flask import Flask, request, render_template
-import subprocess
+import subprocess #ruleaza iverilog
 from assembler import assemble, to_mem_hex
 import os
 
-app = Flask(__name__)
+app = Flask(__name__) #creeaza serverul wev
 
 VERILOG_FILES = [
     "top_tb.v",
@@ -17,13 +17,14 @@ VERILOG_FILES = [
     "single_cycle_components.v",
 ]
 
+#get afiseaza pag, si post ruleaza codul
 @app.route("/", methods=["GET", "POST"])
 def index():
     output = ""
     memhex = ""
     error = ""
 
-    if request.method == "POST":
+    if request.method == "POST":  #cand se apasa run se citeste codul se asambleaza se scrie program.mem si apoi se compileaza intr-un subproces
         asm = request.form.get("code", "")
 
         try:
@@ -33,16 +34,15 @@ def index():
             with open("program.mem", "w", encoding="utf-8") as f:
                 f.write(memhex)
 
-            # Pasul 1: compilează Verilog proaspăt pe Linux
             compile_result = subprocess.run(
                 ["iverilog", "-g2012", "-o", "sim"] + VERILOG_FILES,
                 capture_output=True, text=True
             )
 
+#se verifica de erori si daca nu se ruleaza cu vpp
             if compile_result.returncode != 0:
                 output = "[Eroare compilare Verilog]\n" + compile_result.stderr
             else:
-                # Pasul 2: rulează simularea
                 result = subprocess.run(
                     ["vvp", "sim"],
                     capture_output=True, text=True
